@@ -1,3 +1,11 @@
-to install tcl
+# ai-lab-2
 
-C:\Users\Salabaev.Roman\AppData\Local\Programs\Python\Python313\tcl copy to .venv\
+Лабораторная работа №2 по Системам искуственного интеллекта
+
+Предсказывает риски для выдачи страховки
+
+## Ошибка при отображени графиков
+
+Нужно скопировать
+`C:\Users\ПОЛЬЗОВАТЕЛЬ\AppData\Local\Programs\Python\Python313\tcl`
+в `.venv\`
