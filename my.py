@@ -23,9 +23,10 @@ from sklearn.preprocessing import OneHotEncoder
 import os, joblib, time
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, roc_auc_score, confusion_matrix
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, roc_auc_score, confusion_matrix, precision_recall_curve
 import seaborn as sns
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 
 dump = 'model.dump'
@@ -45,14 +46,16 @@ x = data.drop(['target'], axis=1)
 # Обработка входных данных
 
 # Создаем группы столбцов и даем корректные названия
-categorial_columns = [1, 4, 5, 20, 21, 22, 28]
-categorial_columns = set_names(categorial_columns)
+categorial_columns = set_names([1, 4, 5, 7, 20, 21, 24, 22, 28])
 
-digit_columns = [6, 7, 9, 12, 13, 14, 15, 16, 17, 18, 19, 27]
-digit_columns = set_names(digit_columns)
+digit_columns = set_names([6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 27])
 
-binary_columns = [2, 3, 8, 10, 11, 23, 24, 25, 26]
-binary_columns = set_names(binary_columns)
+binary_columns = set_names([2, 3, 8, 10, 11, 23, 25, 26])
+
+delete_columns = set_names([])
+
+# Удаляем ненужные столбцы
+x = x.drop(delete_columns, axis=1)
 
 # One hot encoding
 print('Выполнение One Hot Encoding')
@@ -71,7 +74,7 @@ x = x.drop(categorial_columns, axis=1)
 
 # Заолняем пустые значения
 print('Заполнение пустых элементов')
-x = x.fillna(-10)
+x = x.fillna(10)
 
 # Стандартизация числовых полей
 print('Стандратизация данных')
@@ -80,9 +83,31 @@ for col in digit_columns:
 
 # Создание тестовых данных и обучение модели
 
+x = x.drop(['variable_6', 'variable_11', 'variable_12', 'variable_13',
+       'variable_14', 'variable_16', 'variable_17', 'variable_18',
+       'variable_19', 'variable_24', 'variable_26', 'variable_27'], axis=1)
+
+
+
+print(x.head())
+
 print('Создание тестовых данных')
-x_train, x_test, Y_train, Y_test = train_test_split(x, Y, test_size = 0.35, random_state = 229)
+x_train, x_test, Y_train, Y_test = train_test_split(x, Y, 
+                                                    test_size = 0.35, 
+                                                    random_state = 229)
 print(x.shape, Y.shape, x_train.shape, x_test.shape, Y_train.shape, Y_test.shape)
+
+# print(x.head)
+
+# rf = RandomForestClassifier(n_estimators=100, random_state=229)
+# rf.fit(x_train, Y_train)
+
+# importances = pd.Series(rf.feature_importances_, index=x.columns)
+# X_selected = x[importances[importances > 0.01].index]
+
+# print(X_selected)
+# print(X_selected.describe())
+# print(X_selected.columns)
 
 logreg = None
 
@@ -96,7 +121,7 @@ else:
     start_time = time.time()
     print('Обучаем модель')
 
-    logreg = LogisticRegression(max_iter = 1500000)
+    logreg = LogisticRegression(max_iter = 2000000, )
     logreg.fit(x_train, Y_train)
 
     print('\nВремя обучения: ', time.time() - start_time)
@@ -133,3 +158,26 @@ plt.show()
 # plt.scatter(x, Y_pred)
 # plt.scatter(x, Y_proba[:, 1])
 # plt.show()
+
+
+# Получение вероятностей
+y_scores = logreg.predict_proba(x_train)[:, 1]
+
+# Определение порога
+precision, recall, thresholds = precision_recall_curve(Y_train, y_scores)
+
+# Выбор порога, который увеличивает Recall
+optimal_threshold = thresholds[np.argmax(recall >= 0.08976418144059832)]
+
+# Применение оптимального порога
+y_pred = (y_scores >= optimal_threshold).astype(float)
+
+
+sns.heatmap(confusion_matrix(Y_train, y_pred), annot = True, fmt='g')
+print('\nTrain data:')
+print('Recall (tresh) =', recall_score(Y_train, y_pred))
+print('Precision (tresh) =', precision_score(Y_train, y_pred))
+print('F1 (tresh) =', f1_score(Y_train, y_pred))
+print('Accuracy (train) =', accuracy_score(Y_train, y_pred))
+print('AUC (train) =', roc_auc_score(Y_train, y_pred))
+plt.show()
